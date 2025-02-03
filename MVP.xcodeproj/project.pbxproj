@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		8C6163732D51118E00781DA1 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 8C6163722D51118E00781DA1 /* Supabase */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		8C6163552D5110A300781DA1 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -35,16 +39,6 @@
 			path = MVP;
 			sourceTree = "<group>";
 		};
-		8C6163572D5110A300781DA1 /* MVPTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = MVPTests;
-			sourceTree = "<group>";
-		};
-		8C6163612D5110A300781DA1 /* MVPUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = MVPUITests;
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -52,6 +46,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8C6163732D51118E00781DA1 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -76,8 +71,6 @@
 			isa = PBXGroup;
 			children = (
 				8C6163462D5110A200781DA1 /* MVP */,
-				8C6163572D5110A300781DA1 /* MVPTests */,
-				8C6163612D5110A300781DA1 /* MVPUITests */,
 				8C6163452D5110A200781DA1 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -112,6 +105,7 @@
 			);
 			name = MVP;
 			packageProductDependencies = (
+				8C6163722D51118E00781DA1 /* Supabase */,
 			);
 			productName = MVP;
 			productReference = 8C6163442D5110A200781DA1 /* MVP.app */;
@@ -129,9 +123,6 @@
 			);
 			dependencies = (
 				8C6163562D5110A300781DA1 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				8C6163572D5110A300781DA1 /* MVPTests */,
 			);
 			name = MVPTests;
 			packageProductDependencies = (
@@ -152,9 +143,6 @@
 			);
 			dependencies = (
 				8C6163602D5110A300781DA1 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				8C6163612D5110A300781DA1 /* MVPUITests */,
 			);
 			name = MVPUITests;
 			packageProductDependencies = (
@@ -195,6 +183,9 @@
 			);
 			mainGroup = 8C61633B2D5110A200781DA1;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				8C6163712D51118E00781DA1 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8C6163452D5110A200781DA1 /* Products */;
 			projectDirPath = "";
@@ -395,7 +386,8 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"MVP/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = Q2NRSYMMCJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -423,7 +415,8 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"MVP/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = Q2NRSYMMCJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -552,6 +545,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		8C6163712D51118E00781DA1 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase-community/supabase-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		8C6163722D51118E00781DA1 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8C6163712D51118E00781DA1 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 8C61633C2D5110A200781DA1 /* Project object */;
 }
