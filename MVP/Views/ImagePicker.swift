@@ -1,15 +1,9 @@
-//
-//  ImagePicker.swift
-//  MVP
-//
-//  Created by Marlon Becker on 03.02.25.
-//
-
 // Views/ImagePicker.swift
 import SwiftUI
 
 struct ImagePicker: UIViewControllerRepresentable {
     @Binding var selectedImage: UIImage?
+    var sourceType: UIImagePickerController.SourceType = .photoLibrary
     @Environment(\.presentationMode) var presentationMode
 
     class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
@@ -32,12 +26,15 @@ struct ImagePicker: UIViewControllerRepresentable {
         }
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
          let picker = UIImagePickerController()
          picker.delegate = context.coordinator
          picker.allowsEditing = false
+         picker.sourceType = sourceType  // Setzt den übergebenen sourceType (.camera oder .photoLibrary)
          return picker
     }
 

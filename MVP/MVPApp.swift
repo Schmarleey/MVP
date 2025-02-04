@@ -8,23 +8,31 @@
 // MVPApp.swift
 import SwiftUI
 
+// MVPApp.swift
+import SwiftUI
+
 @main
 struct MVPApp: App {
     @StateObject private var appState = AppState()
     
     var body: some Scene {
         WindowGroup {
-            NavigationView {
-                if appState.isLoggedIn {
-                    if appState.isOnboarded {
-                        HomeView()
-                    } else {
-                        OnboardingView().environmentObject(appState)
+            if appState.isLoggedIn {
+                if appState.isOnboarded {
+                    TabView {
+                        FeedView()
+                            .tabItem { Label("Feed", systemImage: "list.bullet") }
+                        EventFeedView()
+                            .tabItem { Label("Events", systemImage: "calendar") }
                     }
+                    .environmentObject(appState)
                 } else {
-                    LoginView().environmentObject(appState)
+                    OnboardingView().environmentObject(appState)
                 }
+            } else {
+                LoginView().environmentObject(appState)
             }
         }
     }
 }
+

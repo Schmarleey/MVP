@@ -57,8 +57,8 @@ class SupabaseService {
         }
     }
     
-    // uploadProfileImage: Wandelt das UIImage in JPEG-Daten um, lädt es in den Bucket "profile-images" hoch und liefert die öffentliche URL zurück.
-    func uploadProfileImage(image: UIImage, completion: @escaping (Result<String, Error>) -> Void) {
+    // Generische Funktion zum Hochladen eines Bildes in einen angegebenen Bucket
+    func uploadImage(image: UIImage, bucket: String, completion: @escaping (Result<String, Error>) -> Void) {
         guard let imageData = image.jpegData(compressionQuality: 0.8) else {
             let error = NSError(domain: "Supabase", code: -1, userInfo: [NSLocalizedDescriptionKey: "Bildkonvertierung fehlgeschlagen"])
             completion(.failure(error))
@@ -67,15 +67,40 @@ class SupabaseService {
         let fileName = "\(UUID().uuidString).jpg"
         Task {
             do {
-                // Lade das Bild in den Bucket "profile-images" hoch.
-                _ = try await client.storage.from("profile-images").upload(fileName, data: imageData)
-                // Konstruieren der öffentlichen URL manuell:
-                let publicUrl = "\(Config.supabaseURL)/storage/v1/object/public/profile-images/\(fileName)"
+                _ = try await client.storage.from(bucket).upload(fileName, data: imageData)
+                // Konstruieren der öffentlichen URL manuell
+                let publicUrl = "\(Config.supabaseURL)/storage/v1/object/public/\(bucket)/\(fileName)"
                 completion(.success(publicUrl))
             } catch {
                 completion(.failure(error))
             }
         }
     }
-
+    
+    // Convenience-Funktion: Profilbild hochladen (in "profile-images")
+    func uploadProfileImage(image: UIImage, completion: @escaping (Result<String, Error>) -> Void) {
+        uploadImage(image: image, bucket: "profile-images", completion: completion)
+    }
+    
+    // Convenience-Funktion: Postbild hochladen (in "post-images")
+    func uploadPostImage(image: UIImage, completion: @escaping (Result<String, Error>) -> Void) {
+        uploadImage(image: image, bucket: "post-images", completion: completion)
+    }
+    
+    // Convenience-Funktion: Eventbild hochladen (in "event-images")
+    func uploadEventImage(image: UIImage, completion: @escaping (Result<String, Error>) -> Void) {
+        uploadImage(image: image, bucket: "event-images", completion: completion)
+    }
+    
+    // SignOut: Meldet den Nutzer ab
+    func signOut(completion: @escaping (Result<Void, Error>) -> Void) {
+        Task {
+            do {
+                try await client.auth.signOut()
+                completion(.success(()))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
 }
