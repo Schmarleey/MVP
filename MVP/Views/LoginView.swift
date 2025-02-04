@@ -9,46 +9,56 @@ struct LoginView: View {
     @State private var isLoading = false
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text("Login")
-                .font(.largeTitle)
-                .bold()
-            
-            TextField("Email", text: $email)
-                .keyboardType(.emailAddress)
-                .autocapitalization(.none)
-                .padding()
-                .background(Color(.secondarySystemBackground))
-                .cornerRadius(8)
-            
-            SecureField("Password", text: $password)
-                .padding()
-                .background(Color(.secondarySystemBackground))
-                .cornerRadius(8)
-            
-            if !errorMessage.isEmpty {
-                Text(errorMessage)
-                    .foregroundColor(.red)
-            }
-            
-            Button(action: { login() }) {
-                if isLoading {
-                    ProgressView()
-                } else {
-                    Text("Login")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
+        NavigationView {
+            VStack(spacing: 16) {
+                Text("Login")
+                    .font(.largeTitle)
+                    .bold()
+                
+                TextField("Email", text: $email)
+                    .keyboardType(.emailAddress)
+                    .textContentType(.emailAddress)  // Für AutoFill
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+                    .padding()
+                    .background(Color(.secondarySystemBackground))
+                    .cornerRadius(8)
+                
+                SecureField("Password", text: $password)
+                    .textContentType(.password)       // Für AutoFill
+                    .padding()
+                    .background(Color(.secondarySystemBackground))
+                    .cornerRadius(8)
+                
+                if !errorMessage.isEmpty {
+                    Text(errorMessage)
+                        .foregroundColor(.red)
                 }
+                
+                Button(action: { login() }) {
+                    if isLoading {
+                        ProgressView()
+                    } else {
+                        Text("Login")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                    }
+                }
+                
+                NavigationLink(destination: RegisterView().environmentObject(appState)) {
+                    Text("Noch kein Konto? Jetzt registrieren")
+                        .foregroundColor(.blue)
+                        .underline()
+                }
+                
+                Spacer()
             }
-            
-            NavigationLink("Noch kein Konto? Jetzt registrieren", destination: RegisterView().environmentObject(appState))
-            
-            Spacer()
+            .padding()
+            .navigationBarHidden(true)
         }
-        .padding()
     }
     
     func login() {
@@ -62,11 +72,10 @@ struct LoginView: View {
                 isLoading = false
                 switch result {
                 case .success(let session):
-                    print("Erfolgreich eingeloggt: \(session)")
                     appState.isLoggedIn = true
                     appState.userId = session.user.id.uuidString
-                    appState.currentUsername = "Du"
-                    appState.isOnboarded = UserDefaults.standard.bool(forKey: "isOnboarded")
+                    appState.currentUsername = session.user.email  // Oder den tatsächlichen Username, wenn vorhanden
+                    // Wichtig: Das Onboarding wird _nicht_ zurückgesetzt, wenn es bereits abgeschlossen wurde.
                 case .failure(let error):
                     errorMessage = error.localizedDescription
                 }
@@ -77,8 +86,6 @@ struct LoginView: View {
 
 struct LoginView_Previews: PreviewProvider {
     static var previews: some View {
-        NavigationView {
-            LoginView().environmentObject(AppState())
-        }
+        LoginView().environmentObject(AppState())
     }
 }

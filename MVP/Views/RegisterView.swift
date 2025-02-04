@@ -2,7 +2,7 @@
 import SwiftUI
 
 struct RegisterView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(\.presentationMode) var presentationMode
     @State private var email = ""
     @State private var password = ""
     @State private var infoMessage = ""
@@ -14,25 +14,27 @@ struct RegisterView: View {
             Text("Registrierung")
                 .font(.largeTitle)
                 .bold()
-            
+
             TextField("Email", text: $email)
                 .keyboardType(.emailAddress)
                 .autocapitalization(.none)
                 .padding()
                 .background(Color(.secondarySystemBackground))
                 .cornerRadius(8)
-            
+
             SecureField("Passwort", text: $password)
                 .padding()
                 .background(Color(.secondarySystemBackground))
                 .cornerRadius(8)
-            
+
             if !infoMessage.isEmpty {
                 Text(infoMessage)
                     .foregroundColor(.blue)
             }
-            
-            Button(action: { register() }) {
+
+            Button(action: {
+                register()
+            }) {
                 if isLoading {
                     ProgressView()
                 } else {
@@ -44,34 +46,39 @@ struct RegisterView: View {
                         .cornerRadius(8)
                 }
             }
-            
             Spacer()
         }
         .padding()
         .alert("Registrierung erfolgreich", isPresented: $showConfirmationAlert) {
-            Button("OK", role: .cancel) { }
+            Button("OK", role: .cancel) {
+                // Schließt die RegisterView und kehrt zur LoginView zurück.
+                presentationMode.wrappedValue.dismiss()
+            }
         } message: {
             Text("Bitte bestätige deine E-Mail, um fortzufahren.")
         }
     }
-    
+
     func register() {
         guard !email.isEmpty, !password.isEmpty else {
             infoMessage = "Bitte E-Mail und Passwort eingeben."
             return
         }
+
+        infoMessage = ""
         isLoading = true
-        // Hier kannst du einen Redirect URL (z. B. einen benutzerdefinierten Deep-Link) angeben.
-        let redirectURL = URL(string: "myapp://onboarding")
-        SupabaseService.shared.register(email: email, password: password, redirectURL: redirectURL) { result in
+
+        SupabaseService.shared.register(email: email, password: password) { result in
             DispatchQueue.main.async {
                 isLoading = false
                 switch result {
-                case .success(_):
-                    // Falls doch eine Session zurückgegeben wird, (unüblich) informieren wir den Nutzer.
-                    infoMessage = "Registrierung erfolgreich. Bitte melde dich an."
+                case .success(let session):
+                    print("Registrierung erfolgreich, Session: \(session)")
+                    // Falls ausnahmsweise eine Session zurückgegeben wird.
+                    showConfirmationAlert = true
                 case .failure(let error):
-                    // Wenn der Fehler darauf hinweist, dass keine Session erhalten wurde, interpretieren wir dies als Erfolg.
+                    // Wenn der Fehlertext "Keine Session erhalten" enthält,
+                    // interpretieren wir dies als erfolgreiche Registrierung mit E-Mail-Bestätigung.
                     if error.localizedDescription.contains("Keine Session erhalten") {
                         infoMessage = "Registrierung erfolgreich. Bitte bestätige deine E-Mail."
                         showConfirmationAlert = true
@@ -86,8 +93,6 @@ struct RegisterView: View {
 
 struct RegisterView_Previews: PreviewProvider {
     static var previews: some View {
-        NavigationView {
-            RegisterView().environmentObject(AppState())
-        }
+        RegisterView()
     }
 }

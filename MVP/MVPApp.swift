@@ -1,13 +1,3 @@
-//
-//  MVPApp.swift
-//  MVP
-//
-//  Created by Marlon Becker on 03.02.25.
-//
-
-// MVPApp.swift
-import SwiftUI
-
 // MVPApp.swift
 import SwiftUI
 
@@ -24,6 +14,8 @@ struct MVPApp: App {
                             .tabItem { Label("Feed", systemImage: "list.bullet") }
                         EventFeedView()
                             .tabItem { Label("Events", systemImage: "calendar") }
+                        ProfileView()
+                            .tabItem { Label("Profile", systemImage: "person.circle") }
                     }
                     .environmentObject(appState)
                 } else {
@@ -35,4 +27,3 @@ struct MVPApp: App {
         }
     }
 }
-

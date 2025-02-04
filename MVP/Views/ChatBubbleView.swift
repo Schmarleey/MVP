@@ -4,10 +4,11 @@ import SwiftUI
 struct ChatBubbleView: View {
     let post: Post
     let isCurrentUser: Bool
-    @EnvironmentObject var appState: AppState  // Zugriff auf den globalen Zustand
-
+    @EnvironmentObject var appState: AppState
     @State private var reactionCount: Int = 0
-
+    @State private var postLikeCount: Int = 0
+    @State private var showComments = false
+    
     var body: some View {
         HStack {
             if !isCurrentUser {
@@ -20,12 +21,17 @@ struct ChatBubbleView: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 4)
+        .sheet(isPresented: $showComments) {
+            NavigationView {
+                CommentsView(post: post)
+                    .environmentObject(appState)
+            }
+        }
     }
     
-    /// Die Karte, die alle Inhalte eines Beitrags zusammenfasst.
     private var cardView: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Kopfzeile: Profilbild, tatsächlicher Username und Zeitstempel
+            // Kopfzeile: Profilbild und Username
             HStack(alignment: .center, spacing: 8) {
                 profileImageView
                     .frame(width: 40, height: 40)
@@ -42,14 +48,16 @@ struct ChatBubbleView: View {
             
             Divider()
             
-            // Inhalt: Medienbild (falls vorhanden) und Nachricht
+            // Inhalt: Medien (1:1 Format) und Nachricht
             VStack(alignment: .leading, spacing: 8) {
                 if let mediaUrl = post.mediaUrl, let url = URL(string: mediaUrl) {
                     AsyncImage(url: url) { image in
-                        image.resizable().scaledToFill()
+                        image.resizable()
+                             .aspectRatio(1, contentMode: .fill)
                     } placeholder: {
                         ProgressView()
                     }
+                    .frame(maxWidth: .infinity)
                     .frame(height: 200)
                     .clipped()
                     .cornerRadius(8)
@@ -64,23 +72,36 @@ struct ChatBubbleView: View {
                 }
             }
             
-            // Fußzeile: Like-Button
+            // Top-Kommentar als Vorschau (falls vorhanden)
+            if let topComment = fetchTopComment(for: post) {
+                HStack {
+                    Text("„\(topComment.comment)“")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+            }
+            
+            // Fußzeile: Like-Button, Like-Anzahl und Kommentar-Button
             HStack {
                 Button(action: {
-                    let generator = UIImpactFeedbackGenerator(style: .medium)
-                    generator.impactOccurred()
-                    reactionCount += 1
+                    likePost()
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "heart.fill")
-                            .foregroundColor(.red)
+                            .font(.title2)
+                        Text("\(postLikeCount)")
                             .font(.caption)
-                        Text("\(reactionCount)")
-                            .font(.caption)
-                            .foregroundColor(.gray)
                     }
                 }
                 .buttonStyle(BorderlessButtonStyle())
+                
+                Button(action: {
+                    showComments = true
+                }) {
+                    Image(systemName: "bubble.right.fill")
+                        .font(.title2)
+                }
                 Spacer()
             }
         }
@@ -88,11 +109,14 @@ struct ChatBubbleView: View {
         .background(Color.white)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 2)
+        .onAppear {
+            fetchPostLikeCount()
+        }
     }
     
-    /// Zeigt das Profilbild an.
     private var profileImageView: some View {
         Group {
+            // Verwende das Profilbild aus dem Post (das sollte vom Backend kommen)
             if let profileUrl = post.profileImage, let url = URL(string: profileUrl) {
                 AsyncImage(url: url) { image in
                     image.resizable().scaledToFill()
@@ -106,23 +130,53 @@ struct ChatBubbleView: View {
         }
     }
     
-    /// Gibt den tatsächlichen Username zurück:
     private func postUsername() -> String {
         if isCurrentUser {
-            // Für eigene Beiträge: Verwende den aktuellen Username aus dem AppState.
-            return appState.currentUsername ?? "Du"
+            return "Du"
         } else {
-            // Für fremde Beiträge: Verwende den Username aus dem Post oder einen Standardwert.
             return post.username ?? "Freund"
         }
     }
     
-    /// Formatiert den Zeitstempel relativ zur aktuellen Zeit.
     private func timeAgo(_ date: Date?) -> String {
         guard let date = date else { return "" }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
         return formatter.localizedString(for: date, relativeTo: Date())
+    }
+    
+    private func likePost() {
+        guard let userId = appState.userId else { return }
+        LikesService.shared.likePost(postId: post.id, userId: userId) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success():
+                    fetchPostLikeCount()
+                case .failure(let error):
+                    print("Fehler beim Liken des Posts: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    private func fetchPostLikeCount() {
+        LikesService.shared.fetchPostLikes(postId: post.id) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let count):
+                    postLikeCount = count
+                case .failure(let error):
+                    print("Fehler beim Laden der Post Likes: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    // Dummy-Methode: Top-Kommentar ermitteln (in einem echten Projekt würde dies über den Backend-Query erfolgen)
+    private func fetchTopComment(for post: Post) -> Comment? {
+        // Hier könnte man z. B. den ersten Kommentar (nach created_at) zurückgeben
+        // Für dieses Beispiel wird nil zurückgegeben – implementiere die Logik nach Bedarf.
+        return nil
     }
 }
 
@@ -133,10 +187,10 @@ struct ChatBubbleView_Previews: PreviewProvider {
                 post: Post(
                     id: UUID().uuidString,
                     userId: "123",
-                    mediaUrl: nil,
+                    mediaUrl: "https://via.placeholder.com/300", // Platzhalterbild (1:1)
                     message: "Hallo, wie geht's?",
                     createdAt: Date().addingTimeInterval(-3600),
-                    profileImage: "https://example.com/profile1.jpg",
+                    profileImage: "https://syehmjmotifoiisawceb.supabase.co/storage/v1/object/public/profile-images/5A8FDDF0-0BCE-4915-98AA-60270BE64D4B.jpg",
                     username: "Alice"
                 ),
                 isCurrentUser: false
@@ -145,10 +199,10 @@ struct ChatBubbleView_Previews: PreviewProvider {
                 post: Post(
                     id: UUID().uuidString,
                     userId: "456",
-                    mediaUrl: nil,
+                    mediaUrl: "https://via.placeholder.com/300",
                     message: "Mir geht's gut, danke!",
                     createdAt: Date().addingTimeInterval(-1800),
-                    profileImage: "https://example.com/profile2.jpg",
+                    profileImage: nil,
                     username: "Bob"
                 ),
                 isCurrentUser: true

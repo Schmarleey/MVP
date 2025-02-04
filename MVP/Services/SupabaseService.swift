@@ -103,4 +103,45 @@ class SupabaseService {
             }
         }
     }
+    
+    // fetchProfile: Lädt das Profil des Nutzers anhand der userId
+    func fetchProfile(userId: String, completion: @escaping (Result<Profile, Error>) -> Void) {
+        Task {
+            do {
+                let response = try await client.from("profiles")
+                    .select("*")
+                    .eq("id", value: userId)
+                    .single()
+                    .execute()
+                let data = response.data
+                // Debug: Ausgabe des JSON-Response als String
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("Response data: \(jsonString)")
+                } else {
+                    print("Response data konnte nicht als String decodiert werden")
+                }
+                if data.isEmpty {
+                    let error = NSError(domain: "SupabaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Keine Daten erhalten"])
+                    completion(.failure(error))
+                } else {
+                    let decoder = JSONDecoder()
+                    
+                    // Erstelle einen DateFormatter, der Fractional Seconds unterstützt:
+                    let formatter = DateFormatter()
+                    formatter.locale = Locale(identifier: "en_US_POSIX")
+                    // Format: "2025-02-03T17:12:22.103886+00:00"
+                    formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXXXX"
+                    
+                    decoder.dateDecodingStrategy = .formatted(formatter)
+                    // Wir nutzen hier nicht die automatische Schlüsselkonvertierung,
+                    // da unser Model in den CodingKeys bereits explizit definiert ist.
+                    let profile = try decoder.decode(Profile.self, from: data)
+                    print("Decodiertes Profil: \(profile)")
+                    completion(.success(profile))
+                }
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
 }
