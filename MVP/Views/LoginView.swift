@@ -66,7 +66,7 @@ struct LoginView: View {
                     appState.isLoggedIn = true
                     appState.userId = session.user.id.uuidString
                     // Für diese Demo setzen wir isOnboarded bewusst auf false, damit der Nutzer den Onboarding Flow durchläuft.
-                    appState.isOnboarded = false
+                    appState.isOnboarded = UserDefaults.standard.bool(forKey: "isOnboarded")
                 case .failure(let error):
                     errorMessage = error.localizedDescription
                 }
