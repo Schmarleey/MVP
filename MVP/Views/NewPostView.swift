@@ -11,10 +11,10 @@ struct NewPostView: View {
     @State private var isLoading = false
     @State private var errorMessage = ""
     
-    // Initialer Source Type (zum Beispiel .camera)
+    // Initialer Source Type (z.B. .camera)
     var initialSourceType: UIImagePickerController.SourceType = .camera
     
-    // Computed Property: Falls der initialSourceType (z. B. .camera) nicht verfügbar ist, wird .photoLibrary zurückgegeben.
+    // Falls der initialSourceType nicht verfügbar ist, wird .photoLibrary verwendet.
     var effectiveSourceType: UIImagePickerController.SourceType {
         return UIImagePickerController.isSourceTypeAvailable(initialSourceType) ? initialSourceType : .photoLibrary
     }
@@ -22,16 +22,16 @@ struct NewPostView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 16) {
-                // Bildvorschau (falls ein Bild ausgewählt wurde)
+                // Bildvorschau (falls ausgewählt)
                 if let image = selectedImage {
                     Image(uiImage: image)
                         .resizable()
-                        .scaledToFill()
+                        .aspectRatio(1, contentMode: .fill)
                         .frame(width: 120, height: 120)
+                        .clipped()
                         .clipShape(Circle())
                         .shadow(radius: 4)
                 } else {
-                    // Platzhalter – falls kein Bild ausgewählt
                     Image(systemName: "camera.circle")
                         .resizable()
                         .scaledToFit()
@@ -39,7 +39,7 @@ struct NewPostView: View {
                         .foregroundColor(.gray)
                 }
                 
-                // Button, um den ImagePicker manuell zu öffnen, falls nötig
+                // Button zum Öffnen des ImagePickers
                 Button(action: {
                     showingImagePicker = true
                 }) {
@@ -64,7 +64,7 @@ struct NewPostView: View {
                 
                 Spacer()
                 
-                // Posten-Button ganz unten
+                // Posten-Button
                 Button(action: {
                     createPost()
                 }) {
@@ -90,7 +90,7 @@ struct NewPostView: View {
                 ImagePicker(selectedImage: $selectedImage, sourceType: effectiveSourceType)
             }
             .onAppear {
-                // Wenn noch kein Bild ausgewählt wurde, den ImagePicker automatisch öffnen.
+                // Falls noch kein Bild ausgewählt wurde, ImagePicker automatisch öffnen.
                 if selectedImage == nil {
                     showingImagePicker = true
                 }
@@ -99,15 +99,12 @@ struct NewPostView: View {
     }
     
     func createPost() {
-        // Sicherstellen, dass eine User-ID vorliegt
         guard let userId = appState.userId else {
             errorMessage = "Keine User-ID gefunden."
             return
         }
-        
         isLoading = true
         if let image = selectedImage {
-            // Bild hochladen und dann Post erstellen
             SupabaseService.shared.uploadPostImage(image: image) { result in
                 switch result {
                 case .success(let imageUrl):
@@ -120,16 +117,21 @@ struct NewPostView: View {
                 }
             }
         } else {
-            // Kein Bild ausgewählt – Post ohne Bild erstellen
             sendPost(with: nil, userId: userId)
         }
     }
     
     func sendPost(with imageUrl: String?, userId: String) {
-        // Dummy ID; der Server ersetzt sie normalerweise.
         let dummyId = UUID().uuidString
-        // Hier wird auch der Parameter "profileImage" ergänzt (derzeit nil, da wir das Profilbild separat verwalten)
-        let post = Post(id: dummyId, userId: userId, mediaUrl: imageUrl, message: message, createdAt: Date(), profileImage: nil)
+        // Hier wird der Post mit exakt 6 Parametern erstellt:
+        let post = Post(
+            id: dummyId,
+            userId: userId,
+            mediaUrl: imageUrl,
+            message: message,
+            createdAt: Date(),
+            profile: nil  // Wenn kein Profil übergeben werden soll, explizit nil vom Typ Profile?
+        )
         FeedService.shared.createPost(post: post) { result in
             DispatchQueue.main.async {
                 isLoading = false

@@ -1,4 +1,3 @@
-// Models/AppState.swift
 import Foundation
 
 class AppState: ObservableObject {
@@ -8,7 +7,6 @@ class AppState: ObservableObject {
     @Published var userId: String? = nil {
         didSet {
             UserDefaults.standard.set(userId, forKey: "userId")
-            // Wenn sich die UserID ändert, laden wir den isOnboarded-Status für diesen Account:
             if let uid = userId {
                 self.isOnboarded = UserDefaults.standard.bool(forKey: "isOnboarded-\(uid)")
             } else {
@@ -26,6 +24,8 @@ class AppState: ObservableObject {
             }
         }
     }
+    @Published var showNewPost: Bool = false
+    @Published var showNewEvent: Bool = false
     
     init() {
         self.isLoggedIn = UserDefaults.standard.bool(forKey: "isLoggedIn")

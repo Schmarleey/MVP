@@ -1,10 +1,3 @@
-//
-//  Untitled.swift
-//  MVP
-//
-//  Created by Marlon Becker on 04.02.25.
-//
-
 // Models/Event.swift
 import Foundation
 
@@ -17,6 +10,7 @@ struct Event: Identifiable, Codable {
     let eventDate: Date?
     let price: Double?
     let ticketInfo: String?
+    let eventImage: String?    // Neu: URL zum Eventbild
     let createdAt: Date?
     
     enum CodingKeys: String, CodingKey {
@@ -28,6 +22,7 @@ struct Event: Identifiable, Codable {
         case eventDate = "event_date"
         case price
         case ticketInfo = "ticket_info"
+        case eventImage = "event_image"
         case createdAt = "created_at"
     }
 }

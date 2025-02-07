@@ -1,4 +1,3 @@
-// MVPApp.swift
 import SwiftUI
 
 @main
@@ -9,15 +8,8 @@ struct MVPApp: App {
         WindowGroup {
             if appState.isLoggedIn {
                 if appState.isOnboarded {
-                    TabView {
-                        FeedView()
-                            .tabItem { Label("Feed", systemImage: "list.bullet") }
-                        EventFeedView()
-                            .tabItem { Label("Events", systemImage: "calendar") }
-                        ProfileView()
-                            .tabItem { Label("Profile", systemImage: "person.circle") }
-                    }
-                    .environmentObject(appState)
+                    ContentView() // Neue Container-View, die den glassmorphischen Tabbar enthält
+                        .environmentObject(appState)
                 } else {
                     OnboardingView().environmentObject(appState)
                 }

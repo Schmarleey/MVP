@@ -7,24 +7,40 @@ struct Post: Identifiable, Codable {
     let mediaUrl: String?
     let message: String?
     let createdAt: Date?
-    let profileImage: String?
-    let username: String?  // tatsächlicher Username des Posters
-
+    /// Die verbundenen Profil-Daten – der JSON-Key "profiles" wird in _profile gemappt
+    private let _profile: Profile?
+    
+    // Computed Properties für den Zugriff in den Views
+    var profile: Profile? { _profile }
+    var username: String? { _profile?.username }
+    var profileImage: String? { _profile?.profileImage }
+    
     enum CodingKeys: String, CodingKey {
         case id
         case userId = "user_id"
         case mediaUrl = "media_url"
         case message
         case createdAt = "created_at"
-        case profileImage = "profile_image"
         case profiles
     }
     
-    // Hilfsstruktur zum Dekodieren des verschachtelten Profiles-Arrays
-    struct Profile: Codable {
-        let username: String?
+    // Memberwise initializer – genau 6 Parameter
+    init(id: String,
+         userId: String,
+         mediaUrl: String? = nil,
+         message: String? = nil,
+         createdAt: Date? = nil,
+         profile: Profile? = nil) {
+        self.id = id
+        self.userId = userId
+        self.mediaUrl = mediaUrl
+        self.message = message
+        self.createdAt = createdAt
+        self._profile = profile
     }
     
+    // Custom Decodable-Initializer: Versuche, "profiles" als einzelnes Profile zu dekodieren;
+    // falls das fehlschlägt, als Array und nehme das erste Element.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
@@ -32,17 +48,17 @@ struct Post: Identifiable, Codable {
         mediaUrl = try container.decodeIfPresent(String.self, forKey: .mediaUrl)
         message = try container.decodeIfPresent(String.self, forKey: .message)
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
-        profileImage = try container.decodeIfPresent(String.self, forKey: .profileImage)
-        
-        if let profilesArray = try? container.decode([Profile].self, forKey: .profiles),
-           let firstProfile = profilesArray.first {
-            username = firstProfile.username
+        if let singleProfile = try? container.decode(Profile.self, forKey: .profiles) {
+            _profile = singleProfile
+        } else if let profilesArray = try? container.decode([Profile].self, forKey: .profiles),
+                  let firstProfile = profilesArray.first {
+            _profile = firstProfile
         } else {
-            username = nil
+            _profile = nil
         }
     }
     
-    // Encode-Funktion – wir codieren alle gespeicherten Eigenschaften, aber nicht "profiles"
+    // Custom Encodable-Implementierung – kodiert nur die Post-Felder, nicht den Join
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
@@ -50,23 +66,6 @@ struct Post: Identifiable, Codable {
         try container.encodeIfPresent(mediaUrl, forKey: .mediaUrl)
         try container.encodeIfPresent(message, forKey: .message)
         try container.encodeIfPresent(createdAt, forKey: .createdAt)
-        try container.encodeIfPresent(profileImage, forKey: .profileImage)
-    }
-    
-    // Memberwise Initializer für Previews und manuelle Instanziierung
-    init(id: String,
-         userId: String,
-         mediaUrl: String? = nil,
-         message: String? = nil,
-         createdAt: Date? = nil,
-         profileImage: String? = nil,
-         username: String? = nil) {
-        self.id = id
-        self.userId = userId
-        self.mediaUrl = mediaUrl
-        self.message = message
-        self.createdAt = createdAt
-        self.profileImage = profileImage
-        self.username = username
+        // Den Schlüssel "profiles" kodieren wir nicht
     }
 }

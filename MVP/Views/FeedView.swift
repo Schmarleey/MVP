@@ -1,61 +1,70 @@
-// Views/FeedView.swift
 import SwiftUI
 
 struct FeedView: View {
-    @State private var posts: [Post] = []
+    @State private var posts: [SocialPost] = []
     @State private var isLoading = false
     @State private var errorMessage = ""
-    @State private var showingNewPost = false
     @EnvironmentObject var appState: AppState
 
     var body: some View {
         NavigationView {
-            VStack {
-                if isLoading {
-                    ProgressView()
-                        .padding()
-                }
+            ZStack {
                 ScrollView {
-                    VStack(spacing: 8) {
-                        // Sortiere Beiträge chronologisch
-                        ForEach(posts.sorted { ($0.createdAt ?? Date()) < ($1.createdAt ?? Date()) }) { post in
-                            ChatBubbleView(post: post, isCurrentUser: (post.userId == appState.userId))
+                    LazyVStack(spacing: 16) {
+                        ForEach(posts) { post in
+                            SocialPostView(post: post, isCurrentUser: (post.userId == appState.userId))
                         }
                     }
-                    .padding(.vertical, 8)
+                    .padding()
                 }
+                .navigationTitle("Social Feed")
+                .onAppear(perform: loadPosts)
+                .alert(isPresented: .constant(!errorMessage.isEmpty)) {
+                    Alert(title: Text("Fehler"),
+                          message: Text(errorMessage),
+                          dismissButton: .default(Text("OK")))
+                }
+                
+                // Overlay: Floating Create-Button (links oben) – Positionierung anpassen, sodass er direkt über der Tabbar liegt
+                GeometryReader { geometry in
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Button(action: {
+                                appState.showNewPost = true
+                                let generator = UIImpactFeedbackGenerator(style: .medium)
+                                generator.impactOccurred()
+                            }) {
+                                TintedGlassButton(systemImage: "camera.circle.fill")
+                            }
+                            .padding(.leading, 20)
+                            .padding(.bottom, 130)
+                            Spacer()
+                        }
+                        .frame(width: geometry.size.width, alignment: .bottomLeading)
+                    }
+                }
+                .ignoresSafeArea()
             }
-            .navigationTitle("Social Feed")
-            .navigationBarItems(trailing: Button(action: {
-                print("Kamera-Button gedrückt")
-                showingNewPost = true
-            }) {
-                Image(systemName: "camera.circle.fill")
-                    .resizable()
-                    .frame(width: 40, height: 40)
-                    .foregroundColor(.blue)
-            })
-            .onAppear { loadPosts() }
         }
-        // Hänge das Sheet an den NavigationView an
-        .sheet(isPresented: $showingNewPost) {
+        .sheet(isPresented: $appState.showNewPost) {
             NewPostView(initialSourceType: .camera)
                 .environmentObject(appState)
         }
-        // Sicherstellen, dass der NavigationView den gesamten Raum einnimmt
-        .edgesIgnoringSafeArea(.all)
     }
     
     func loadPosts() {
         isLoading = true
-        FeedService.shared.fetchPosts { result in
+        FeedService.shared.fetchSocialPosts { result in
             DispatchQueue.main.async {
                 isLoading = false
                 switch result {
                 case .success(let posts):
                     self.posts = posts
+                    print("FeedView: \(posts.count) SocialPosts geladen")
                 case .failure(let error):
                     errorMessage = error.localizedDescription
+                    print("FeedView: Fehler: \(error.localizedDescription)")
                 }
             }
         }

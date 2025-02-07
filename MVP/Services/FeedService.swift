@@ -1,4 +1,3 @@
-// Services/FeedService.swift
 import Foundation
 import Supabase
 
@@ -13,33 +12,38 @@ class FeedService {
         )
     }
     
-    // Lädt alle Posts für den Social Feed
-    func fetchPosts(completion: @escaping (Result<[Post], Error>) -> Void) {
+    // Lädt alle SocialPosts aus der View
+    func fetchSocialPosts(completion: @escaping (Result<[SocialPost], Error>) -> Void) {
         Task {
             do {
-                let response = try await client.from("posts").select("*").execute()
+                let response = try await client.from("social_posts")
+                    .select("*")
+                    .order("createdAt", ascending: false)
+                    .execute()
                 let data = response.data
                 if data.isEmpty {
-                    let error = NSError(domain: "FeedService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])
-                    completion(.failure(error))
+                    completion(.success([]))
                 } else {
                     let decoder = JSONDecoder()
                     decoder.dateDecodingStrategy = .iso8601
-                    let posts = try decoder.decode([Post].self, from: data)
+                    let posts = try decoder.decode([SocialPost].self, from: data)
                     completion(.success(posts))
                 }
             } catch {
+                print("FeedService: Fehler beim Laden der SocialPosts: \(error.localizedDescription)")
                 completion(.failure(error))
             }
         }
     }
     
-    // Erstellt einen neuen Post
+    // Erstellt einen neuen Post in der Tabelle "posts"
     func createPost(post: Post, completion: @escaping (Result<Post, Error>) -> Void) {
         Task {
             do {
-                // Statt das Post-Objekt zu codieren, übergeben wir es direkt.
-                let response = try await client.from("posts").insert(post).select("*").execute()
+                let response = try await client.from("posts")
+                    .insert(post)
+                    .select("*")
+                    .execute()
                 let data = response.data
                 if data.isEmpty {
                     let error = NSError(domain: "FeedService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])
@@ -47,21 +51,12 @@ class FeedService {
                 } else {
                     let decoder = JSONDecoder()
                     decoder.dateDecodingStrategy = .iso8601
-                    do {
-                        let newPosts = try decoder.decode([Post].self, from: data)
-                        if let newPost = newPosts.first {
-                            completion(.success(newPost))
-                        } else {
-                            let error = NSError(domain: "FeedService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Post not created"])
-                            completion(.failure(error))
-                        }
-                    } catch {
-                        do {
-                            let newPost = try decoder.decode(Post.self, from: data)
-                            completion(.success(newPost))
-                        } catch {
-                            completion(.failure(error))
-                        }
+                    let newPosts = try decoder.decode([Post].self, from: data)
+                    if let newPost = newPosts.first {
+                        completion(.success(newPost))
+                    } else {
+                        let error = NSError(domain: "FeedService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Post not created"])
+                        completion(.failure(error))
                     }
                 }
             } catch {

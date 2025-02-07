@@ -13,15 +13,17 @@ class EventService {
         )
     }
     
-    // Lädt alle Events für den Event Feed
+    // Lädt alle Events
     func fetchEvents(completion: @escaping (Result<[Event], Error>) -> Void) {
         Task {
             do {
-                let response = try await client.from("events").select("*").execute()
+                let response = try await client.from("events")
+                    .select("*")
+                    .order("created_at", ascending: false)
+                    .execute()
                 let data = response.data
                 if data.isEmpty {
-                    let error = NSError(domain: "EventService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])
-                    completion(.failure(error))
+                    completion(.success([]))
                 } else {
                     let decoder = JSONDecoder()
                     decoder.dateDecodingStrategy = .iso8601
@@ -38,7 +40,10 @@ class EventService {
     func createEvent(event: Event, completion: @escaping (Result<Event, Error>) -> Void) {
         Task {
             do {
-                let response = try await client.from("events").insert(event).select("*").execute()
+                let response = try await client.from("events")
+                    .insert(event)
+                    .select("*")
+                    .execute()
                 let data = response.data
                 if data.isEmpty {
                     let error = NSError(domain: "EventService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])
@@ -46,21 +51,12 @@ class EventService {
                 } else {
                     let decoder = JSONDecoder()
                     decoder.dateDecodingStrategy = .iso8601
-                    do {
-                        let newEvents = try decoder.decode([Event].self, from: data)
-                        if let newEvent = newEvents.first {
-                            completion(.success(newEvent))
-                        } else {
-                            let error = NSError(domain: "EventService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Event not created"])
-                            completion(.failure(error))
-                        }
-                    } catch {
-                        do {
-                            let newEvent = try decoder.decode(Event.self, from: data)
-                            completion(.success(newEvent))
-                        } catch {
-                            completion(.failure(error))
-                        }
+                    let newEvents = try decoder.decode([Event].self, from: data)
+                    if let newEvent = newEvents.first {
+                        completion(.success(newEvent))
+                    } else {
+                        let error = NSError(domain: "EventService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Event not created"])
+                        completion(.failure(error))
                     }
                 }
             } catch {
