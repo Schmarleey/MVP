@@ -1,10 +1,3 @@
-//
-//  Config.swift
-//  MVP
-//
-//  Created by Marlon Becker on 03.02.25.
-//
-
 // Models/Config.swift
 struct Config {
     static let supabaseURL = "https://syehmjmotifoiisawceb.supabase.co"

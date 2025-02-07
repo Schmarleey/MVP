@@ -1,10 +1,3 @@
-//
-//  ProfileUpdateData.swift
-//  MVP
-//
-//  Created by Marlon Becker on 03.02.25.
-//
-
 import Foundation
 
 struct ProfileUpdateData: Encodable {

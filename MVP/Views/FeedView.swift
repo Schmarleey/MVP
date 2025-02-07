@@ -4,6 +4,8 @@ struct FeedView: View {
     @State private var posts: [SocialPost] = []
     @State private var isLoading = false
     @State private var errorMessage = ""
+    @State private var searchText: String = ""
+    @State private var isSearchActive: Bool = false
     @EnvironmentObject var appState: AppState
 
     var body: some View {
@@ -11,13 +13,13 @@ struct FeedView: View {
             ZStack {
                 ScrollView {
                     LazyVStack(spacing: 16) {
-                        ForEach(posts) { post in
+                        ForEach(filteredPosts) { post in
                             SocialPostView(post: post, isCurrentUser: (post.userId == appState.userId))
                         }
                     }
                     .padding()
                 }
-                .navigationTitle("Social Feed")
+                .navigationBarHidden(true)
                 .onAppear(perform: loadPosts)
                 .alert(isPresented: .constant(!errorMessage.isEmpty)) {
                     Alert(title: Text("Fehler"),
@@ -25,31 +27,48 @@ struct FeedView: View {
                           dismissButton: .default(Text("OK")))
                 }
                 
-                // Overlay: Floating Create-Button (links oben) – Positionierung anpassen, sodass er direkt über der Tabbar liegt
-                GeometryReader { geometry in
-                    VStack {
+                // Floating Search Bar: Oben rechts
+                VStack {
+                    HStack {
                         Spacer()
-                        HStack {
-                            Button(action: {
+                        FloatingSearchBar(searchText: $searchText, isSearchActive: $isSearchActive)
+                            .padding(.top, 10)
+                            .padding(.trailing, 20)
+                    }
+                    Spacer()
+                }
+                
+                // Floating Create Button: Unten links, etwas über der TabBar
+                VStack {
+                    Spacer()
+                    HStack {
+                        TintedGlassButton(systemImage: "camera.circle.fill")
+                            .onTapGesture {
                                 appState.showNewPost = true
                                 let generator = UIImpactFeedbackGenerator(style: .medium)
                                 generator.impactOccurred()
-                            }) {
-                                TintedGlassButton(systemImage: "camera.circle.fill")
                             }
                             .padding(.leading, 20)
-                            .padding(.bottom, 130)
-                            Spacer()
-                        }
-                        .frame(width: geometry.size.width, alignment: .bottomLeading)
+                            .padding(.bottom, 90) // Passe diesen Wert an, um ihn genau über der TabBar zu positionieren
+                        Spacer()
                     }
                 }
-                .ignoresSafeArea()
             }
         }
         .sheet(isPresented: $appState.showNewPost) {
             NewPostView(initialSourceType: .camera)
                 .environmentObject(appState)
+        }
+    }
+    
+    var filteredPosts: [SocialPost] {
+        if searchText.isEmpty {
+            return posts
+        } else {
+            return posts.filter { post in
+                (post.username?.lowercased().contains(searchText.lowercased()) ?? false) ||
+                (post.message?.lowercased().contains(searchText.lowercased()) ?? false)
+            }
         }
     }
     

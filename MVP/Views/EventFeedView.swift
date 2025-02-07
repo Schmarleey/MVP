@@ -4,94 +4,73 @@ struct EventFeedView: View {
     @State private var events: [Event] = []
     @State private var isLoading = false
     @State private var errorMessage = ""
+    @State private var searchText: String = ""
+    @State private var isSearchActive: Bool = false
     @EnvironmentObject var appState: AppState
     
     var body: some View {
         NavigationView {
             ZStack {
                 List {
-                    ForEach(events) { event in
-                        VStack(alignment: .leading, spacing: 8) {
-                            if let imageUrl = event.eventImage, let url = URL(string: imageUrl) {
-                                AsyncImage(url: url) { phase in
-                                    switch phase {
-                                    case .empty:
-                                        ProgressView().frame(height: 200)
-                                    case .success(let image):
-                                        image
-                                            .resizable()
-                                            .aspectRatio(1, contentMode: .fill)
-                                            .frame(maxWidth: .infinity)
-                                            .frame(height: 200)
-                                            .clipped()
-                                    case .failure(_):
-                                        Color.gray.frame(height: 200)
-                                    @unknown default:
-                                        Color.gray.frame(height: 200)
-                                    }
-                                }
-                                .cornerRadius(8)
-                            } else {
-                                Color.gray
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 200)
-                                    .cornerRadius(8)
-                            }
-                            
-                            Text(event.title)
-                                .font(.headline)
-                            if let description = event.description {
-                                Text(description)
-                                    .font(.body)
-                                    .lineLimit(2)
-                            }
-                            if let location = event.location {
-                                Text(location)
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
-                            if let eventDate = event.eventDate {
-                                Text(eventDate, style: .date)
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                        .padding(.vertical, 8)
+                    ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
+                        // Ermittele, ob ein Monatsmarker angezeigt werden soll:
+                        let showMarker = shouldShowMonthMarker(at: index)
+                        let monthText = showMarker ? formattedMonth(for: event.eventDate) : nil
+                        
+                        TimelineEventRow(event: event, showMonthMarker: showMarker, monthText: monthText)
+                            .listRowSeparator(.hidden)
                     }
                 }
                 .listStyle(PlainListStyle())
-                .navigationTitle("Events")
+                .navigationBarHidden(true)
                 .onAppear(perform: loadEvents)
                 .alert(isPresented: .constant(!errorMessage.isEmpty)) {
-                    Alert(title: Text("Error"),
+                    Alert(title: Text("Fehler"),
                           message: Text(errorMessage),
                           dismissButton: .default(Text("OK")))
                 }
                 
-                // Overlay: Floating Create-Button (links oben) in der EventFeedView
-                GeometryReader { geometry in
-                    VStack {
+                // Overlay: Floating Search Bar in der oberen rechten Ecke
+                VStack {
+                    HStack {
                         Spacer()
-                        HStack {
-                            Button(action: {
+                        FloatingSearchBar(searchText: $searchText, isSearchActive: $isSearchActive)
+                            .padding(.top, 10)
+                            .padding(.trailing, 20)
+                    }
+                    Spacer()
+                }
+                
+                // Overlay: Floating Create Button (für Events) – links, etwas oberhalb der Tabbar
+                VStack {
+                    Spacer()
+                    HStack {
+                        TintedGlassButton(systemImage: "plus.circle.fill")
+                            .onTapGesture {
                                 appState.showNewEvent = true
                                 let generator = UIImpactFeedbackGenerator(style: .medium)
                                 generator.impactOccurred()
-                            }) {
-                                TintedGlassButton(systemImage: "plus.circle.fill")
                             }
                             .padding(.leading, 20)
-                            .padding(.bottom, 130)
-                            Spacer()
-                        }
-                        .frame(width: geometry.size.width, alignment: .bottomLeading)
+                            .padding(.bottom, 80)
+                        Spacer()
                     }
                 }
-                .ignoresSafeArea()
             }
         }
         .sheet(isPresented: $appState.showNewEvent) {
             NewEventView().environmentObject(appState)
+        }
+    }
+    
+    // Filterung der Events anhand des Suchtextes (falls aktiv)
+    var filteredEvents: [Event] {
+        if searchText.isEmpty {
+            return events
+        } else {
+            return events.filter { event in
+                event.title.lowercased().contains(searchText.lowercased())
+            }
         }
     }
     
@@ -101,13 +80,37 @@ struct EventFeedView: View {
             DispatchQueue.main.async {
                 isLoading = false
                 switch result {
-                case .success(let events):
-                    self.events = events
+                case .success(let fetchedEvents):
+                    // Sortiere chronologisch (älteste oben)
+                    self.events = fetchedEvents.sorted { ($0.eventDate ?? Date.distantPast) < ($1.eventDate ?? Date.distantPast) }
                 case .failure(let error):
                     errorMessage = error.localizedDescription
                 }
             }
         }
+    }
+    
+    // Hilfsfunktion: Bestimmt, ob an der aktuellen Position ein Monatsmarker angezeigt werden soll
+    func shouldShowMonthMarker(at index: Int) -> Bool {
+        guard index < events.count else { return false }
+        let calendar = Calendar.current
+        let currentEventDate = events[index].eventDate ?? Date.distantPast
+        if index == 0 {
+            return true  // Erster Eintrag: Marker anzeigen
+        } else {
+            let previousEventDate = events[index - 1].eventDate ?? Date.distantPast
+            // Marker anzeigen, wenn sich der Monat ändert:
+            return !calendar.isDate(currentEventDate, equalTo: previousEventDate, toGranularity: .month)
+        }
+    }
+    
+    // Hilfsfunktion: Formatiert das Datum in "Monat Jahr" (z. B. "März 2025")
+    func formattedMonth(for date: Date?) -> String {
+        guard let date = date else { return "" }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "de_DE")
+        formatter.dateFormat = "LLLL yyyy"
+        return formatter.string(from: date).capitalized
     }
 }
 
