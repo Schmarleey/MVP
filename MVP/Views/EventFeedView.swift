@@ -2,86 +2,75 @@ import SwiftUI
 
 struct EventFeedView: View {
     @State private var events: [Event] = []
-    @State private var isLoading = false
-    @State private var errorMessage = ""
+    @State private var errorMessage: String = ""
     @State private var searchText: String = ""
     @State private var isSearchActive: Bool = false
+    
     @EnvironmentObject var appState: AppState
     
     var body: some View {
         NavigationView {
             ZStack {
-                List {
-                    ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
-                        // Ermittele, ob ein Monatsmarker angezeigt werden soll:
-                        let showMarker = shouldShowMonthMarker(at: index)
-                        let monthText = showMarker ? formattedMonth(for: event.eventDate) : nil
-                        
-                        TimelineEventRow(event: event, showMonthMarker: showMarker, monthText: monthText)
-                            .listRowSeparator(.hidden)
-                    }
-                }
-                .listStyle(PlainListStyle())
-                .navigationBarHidden(true)
-                .onAppear(perform: loadEvents)
-                .alert(isPresented: .constant(!errorMessage.isEmpty)) {
-                    Alert(title: Text("Fehler"),
-                          message: Text(errorMessage),
-                          dismissButton: .default(Text("OK")))
-                }
+                Color(hexValue: "#fffdfa").ignoresSafeArea()
                 
-                // Overlay: Floating Search Bar in der oberen rechten Ecke
-                VStack {
-                    HStack {
-                        Spacer()
-                        FloatingSearchBar(searchText: $searchText, isSearchActive: $isSearchActive)
-                            .padding(.top, 10)
-                            .padding(.trailing, 20)
-                    }
-                    Spacer()
-                }
-                
-                // Overlay: Floating Create Button (für Events) – links, etwas oberhalb der Tabbar
-                VStack {
-                    Spacer()
-                    HStack {
-                        TintedGlassButton(systemImage: "plus.circle.fill")
-                            .onTapGesture {
-                                appState.showNewEvent = true
-                                let generator = UIImpactFeedbackGenerator(style: .medium)
-                                generator.impactOccurred()
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 16) {
+                        ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
+                            if shouldShowMonthHeader(at: index) {
+                                MonthHeaderView(month: formattedMonthHeader(for: event.eventDate))
                             }
-                            .padding(.leading, 20)
-                            .padding(.bottom, 80)
-                        Spacer()
+                            TimelineEventRow(event: event)
+                        }
+                        FooterView()
                     }
+                    .padding(.top, 60)
+                    .padding(.horizontal, 8)
                 }
+                
+                VStack(alignment: .trailing) {
+                    FloatingSearchBar(searchText: $searchText, isSearchActive: $isSearchActive)
+                        .padding(.trailing, 0) // Optional für zusätzlichen Abstand
+                        .padding(.top, 0)
+                    Spacer()
+                }
+            }
+            .navigationBarHidden(true)
+            .onAppear(perform: loadEvents)
+            .alert(isPresented: .constant(!errorMessage.isEmpty)) {
+                Alert(title: Text("Fehler"),
+                      message: Text(errorMessage),
+                      dismissButton: .default(Text("OK")))
             }
         }
         .sheet(isPresented: $appState.showNewEvent) {
-            NewEventView().environmentObject(appState)
+            NewEventBuilderView().environmentObject(appState)
         }
     }
     
-    // Filterung der Events anhand des Suchtextes (falls aktiv)
-    var filteredEvents: [Event] {
-        if searchText.isEmpty {
-            return events
-        } else {
-            return events.filter { event in
-                event.title.lowercased().contains(searchText.lowercased())
-            }
+    func shouldShowMonthHeader(at index: Int) -> Bool {
+        guard index < events.count else { return false }
+        let eventDate = events[index].eventDate ?? Date.distantPast
+        if Calendar.current.isDate(eventDate, equalTo: Date(), toGranularity: .month) {
+            return false
         }
+        if index == 0 { return true }
+        let previousDate = events[index - 1].eventDate ?? Date.distantPast
+        return !Calendar.current.isDate(eventDate, equalTo: previousDate, toGranularity: .month)
+    }
+    
+    func formattedMonthHeader(for date: Date?) -> String {
+        guard let date = date else { return "" }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "de_DE")
+        formatter.dateFormat = "LLLL yyyy"
+        return formatter.string(from: date).capitalized
     }
     
     func loadEvents() {
-        isLoading = true
         EventService.shared.fetchEvents { result in
             DispatchQueue.main.async {
-                isLoading = false
                 switch result {
                 case .success(let fetchedEvents):
-                    // Sortiere chronologisch (älteste oben)
                     self.events = fetchedEvents.sorted { ($0.eventDate ?? Date.distantPast) < ($1.eventDate ?? Date.distantPast) }
                 case .failure(let error):
                     errorMessage = error.localizedDescription
@@ -89,28 +78,37 @@ struct EventFeedView: View {
             }
         }
     }
-    
-    // Hilfsfunktion: Bestimmt, ob an der aktuellen Position ein Monatsmarker angezeigt werden soll
-    func shouldShowMonthMarker(at index: Int) -> Bool {
-        guard index < events.count else { return false }
-        let calendar = Calendar.current
-        let currentEventDate = events[index].eventDate ?? Date.distantPast
-        if index == 0 {
-            return true  // Erster Eintrag: Marker anzeigen
-        } else {
-            let previousEventDate = events[index - 1].eventDate ?? Date.distantPast
-            // Marker anzeigen, wenn sich der Monat ändert:
-            return !calendar.isDate(currentEventDate, equalTo: previousEventDate, toGranularity: .month)
-        }
+}
+
+struct FooterView: View {
+    var body: some View {
+        Text("Nothing planned")
+            .font(.headline)
+            .foregroundColor(.gray)
+            .padding()
+            .frame(maxWidth: .infinity)
+            .transition(.opacity)
     }
-    
-    // Hilfsfunktion: Formatiert das Datum in "Monat Jahr" (z. B. "März 2025")
-    func formattedMonth(for date: Date?) -> String {
-        guard let date = date else { return "" }
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "de_DE")
-        formatter.dateFormat = "LLLL yyyy"
-        return formatter.string(from: date).capitalized
+}
+
+struct MonthHeaderView: View {
+    let month: String
+    var body: some View {
+        HStack(spacing: 0) {
+            Rectangle()
+                .fill(Color(hexValue: "#204039"))
+                .frame(width: 4)
+            Text(month)
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundColor(Color(hexValue: "#f7b32b"))
+                .padding(.leading, 4)
+            Spacer()
+        }
+        .padding(.vertical, 4)
+        .background(Color.white.opacity(0.9))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal, 4)
     }
 }
 

@@ -2,68 +2,39 @@ import SwiftUI
 
 struct TimelineEventRow: View {
     let event: Event
-    let showMonthMarker: Bool
-    let monthText: String?  // z. B. "März 2025"
-
+    @EnvironmentObject var appState: AppState
+    
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            // Timeline-Spalte
-            VStack(alignment: .center) {
-                if showMonthMarker, let monthText = monthText {
-                    // Monatsmarker: ein größerer Kreis mit der Monatsüberschrift daneben (oder darüber)
-                    VStack(spacing: 4) {
-                        Circle()
-                            .fill(Color.gray)
-                            .frame(width: 14, height: 14)
-                        Text(monthText)
-                            .font(.caption2)
-                            .foregroundColor(.gray)
-                    }
-                    .padding(.bottom, 4)
-                } else {
-                    // Sonst: kleiner Punkt (Dot) – immer zentriert in der Zeile
-                    Circle()
-                        .fill(Color.gray)
-                        .frame(width: 8, height: 8)
-                        .padding(.bottom, 10)
-                }
-                // Verlängerung des Zeitstrahls (flexible Linie, die nach unten reicht)
-                Rectangle()
-                    .fill(Color.gray)
-                    .frame(width: 2)
-                    .frame(maxHeight: .infinity)
+        EventCardView(event: event)
+            .onTapGesture {
+                appState.selectedEvent = event
+                appState.showNewPost = true
             }
-            .frame(width: 50)  // Feste Breite für die Timeline-Spalte
+            .padding(.vertical, 8)
+    }
+}
 
-            // Event-Karte
-            VStack(alignment: .leading, spacing: 8) {
-                if let imageUrl = event.eventImage, let url = URL(string: imageUrl) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .empty:
-                            ProgressView().frame(maxWidth: .infinity)
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .aspectRatio(1, contentMode: .fill)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: UIScreen.main.bounds.width - 80) // Dynamische Breite, sodass es quadratisch ist
-                                .clipped()
-                        case .failure(_):
-                            Color.gray.frame(maxWidth: .infinity)
-                                .frame(height: UIScreen.main.bounds.width - 80)
-                        @unknown default:
-                            Color.gray.frame(maxWidth: .infinity)
-                                .frame(height: UIScreen.main.bounds.width - 80)
-                        }
-                    }
-                    .cornerRadius(8)
+struct EventCardView: View {
+    let event: Event
+    var body: some View {
+        VStack(spacing: 0) {
+            ZStack(alignment: .topTrailing) {
+                if let imageUrl = event.eventImage,
+                   !imageUrl.isEmpty,
+                   let url = URL(string: imageUrl) {
+                    CachedAsyncImage(url: url)
+                        .frame(maxWidth: .infinity, maxHeight: 200)
+                        .clipped()
                 } else {
                     Color.gray
-                        .frame(maxWidth: .infinity)
-                        .frame(height: UIScreen.main.bounds.width - 80)
-                        .cornerRadius(8)
+                        .frame(maxWidth: .infinity, maxHeight: 200)
                 }
+                if let eventDate = event.eventDate {
+                    CalendarIconView(date: eventDate)
+                        .padding(6)
+                }
+            }
+            VStack(alignment: .leading, spacing: 4) {
                 Text(event.title)
                     .font(.headline)
                 if let description = event.description {
@@ -76,14 +47,49 @@ struct TimelineEventRow: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
-                if let eventDate = event.eventDate {
-                    Text(eventDate, style: .date)
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
             }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.white)
         }
-        .padding(.vertical, 8)
+        .background(Color.white)
+        .cornerRadius(8)
+        .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
+        .frame(maxWidth: UIScreen.main.bounds.width - 16)
+    }
+}
+
+struct CalendarIconView: View {
+    let date: Date
+    var body: some View {
+        VStack(spacing: 0) {
+            Text(getMonthString(date))
+                .font(.caption2)
+                .foregroundColor(.white)
+                .frame(width: 28)
+                .padding(2)
+                .background(Color.red)
+            Text(getDayString(date))
+                .font(.headline)
+                .foregroundColor(.black)
+                .frame(width: 28)
+                .padding(2)
+                .background(Color.white)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .shadow(radius: 2)
+    }
+    
+    private func getMonthString(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM"
+        return formatter.string(from: date).uppercased()
+    }
+    
+    private func getDayString(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d"
+        return formatter.string(from: date)
     }
 }
 
@@ -92,8 +98,8 @@ struct TimelineEventRow_Previews: PreviewProvider {
         TimelineEventRow(
             event: Event(
                 id: UUID().uuidString,
-                creatorId: "dummy",
-                title: "Sample Event",
+                creatorId: UUID().uuidString,
+                title: "Beispiel-Event",
                 description: "Dies ist ein Beispiel-Event.",
                 location: "Berlin",
                 eventDate: Date(),
@@ -101,10 +107,9 @@ struct TimelineEventRow_Previews: PreviewProvider {
                 ticketInfo: nil,
                 eventImage: "https://via.placeholder.com/300",
                 createdAt: Date()
-            ),
-            showMonthMarker: true,
-            monthText: "März 2025"
+            )
         )
+        .environmentObject(AppState())
         .previewLayout(.sizeThatFits)
         .padding()
     }

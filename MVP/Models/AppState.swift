@@ -26,6 +26,7 @@ class AppState: ObservableObject {
     }
     @Published var showNewPost: Bool = false
     @Published var showNewEvent: Bool = false
+    @Published var selectedEvent: Event? = nil
     
     init() {
         self.isLoggedIn = UserDefaults.standard.bool(forKey: "isLoggedIn")

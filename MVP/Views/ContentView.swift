@@ -2,11 +2,12 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var selectedTab: Tab = .feed
+    @Namespace private var buttonNamespace
+    @State private var showCreateInTabBar: Bool = false
     @EnvironmentObject var appState: AppState
-
+    
     var body: some View {
         ZStack {
-            // Anzeigen der ausgewählten View
             Group {
                 switch selectedTab {
                 case .feed:
@@ -18,12 +19,20 @@ struct ContentView: View {
                 }
             }
             .ignoresSafeArea()
-            
-            // Glassmorphische Tabbar am unteren Rand
-            VStack {
-                Spacer()
-                GlassmorphicTabBar(selectedTab: $selectedTab)
-                    .padding(.bottom, 10)
+            .overlay(
+                SimpleGlassmorphicTabBar(selectedTab: $selectedTab,
+                                          showCreateInTabBar: $showCreateInTabBar,
+                                          namespace: buttonNamespace)
+                    .environmentObject(appState),
+                alignment: .bottom
+            )
+        }
+        .onAppear {
+            // Unabhängig von den anderen Inhalten: Nach 2 Sekunden wird der Create-Button in der Tab-Bar aktiviert.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                withAnimation(.spring()) {
+                    showCreateInTabBar = true
+                }
             }
         }
     }

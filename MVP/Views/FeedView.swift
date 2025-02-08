@@ -37,22 +37,6 @@ struct FeedView: View {
                     }
                     Spacer()
                 }
-                
-                // Floating Create Button: Unten links, etwas über der TabBar
-                VStack {
-                    Spacer()
-                    HStack {
-                        TintedGlassButton(systemImage: "camera.circle.fill")
-                            .onTapGesture {
-                                appState.showNewPost = true
-                                let generator = UIImpactFeedbackGenerator(style: .medium)
-                                generator.impactOccurred()
-                            }
-                            .padding(.leading, 20)
-                            .padding(.bottom, 90) // Passe diesen Wert an, um ihn genau über der TabBar zu positionieren
-                        Spacer()
-                    }
-                }
             }
         }
         .sheet(isPresented: $appState.showNewPost) {

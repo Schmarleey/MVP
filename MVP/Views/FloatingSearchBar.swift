@@ -33,18 +33,18 @@ struct FloatingSearchBar: View {
                 }
             }
         }
-        .padding(.horizontal, 15)
+        .padding(.horizontal, 10)
         .padding(.vertical, 10)
         .background(
             Capsule()
                 .fill(.ultraThinMaterial)
                 .overlay(
                     Capsule()
-                        .stroke(Color.white.opacity(0.5), lineWidth: 1)
+                        .stroke(Color.white.opacity(0.8), lineWidth: 2)
                 )
         )
-        .frame(maxWidth: isSearchActive ? 300 : 50)
-        .animation(.easeInOut(duration: 0.3), value: isSearchActive)
+        .frame(maxWidth: isSearchActive ? 390 : 50)
+        .animation(.easeInOut(duration: 0.15), value: isSearchActive)
     }
 }
 
